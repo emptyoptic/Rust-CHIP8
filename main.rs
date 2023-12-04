@@ -36,14 +36,6 @@ impl Default for Chip8_cpu {
         }
     }
 }
- 
-fn read_byte(c8: &mut Chip8_cpu, address: u16) -> u8 {
-   c8.memory[address as usize] // returns the memory address
-}
-
-fn write_byte(c8: &mut Chip8_cpu, address: u16, value: u8) {
-    c8.memory[address as usize] = value; // same as c8.memory[x] = y
-}
 
 fn open_rom(c8: &mut Chip8_cpu, file_name: &str) {
     let mut file_buffer = File::open(file_name).unwrap();           // Open file
@@ -51,7 +43,7 @@ fn open_rom(c8: &mut Chip8_cpu, file_name: &str) {
     file_buffer.read_to_end(&mut data);                             // Read the whole file and store data in 8 bits
 
     for i in 0..data.len() {
-        write_byte(c8, (c8.pc + (i as u16)) as u16, data[i]);
+        c8.memory[(c8.pc as usize) + i] = data[i];
     }
 
     //TODO: Convert file to opcodes (instructions)
