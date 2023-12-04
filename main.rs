@@ -37,12 +37,12 @@ impl Default for Chip8_cpu {
     }
 }
  
-fn read_byte(c8: &mut Chip8_cpu, address: u16, value: u8) -> u8 {
-   c8.memory[address as usize]
+fn read_byte(c8: &mut Chip8_cpu, address: u16) -> u8 {
+   c8.memory[address as usize] // returns the memory address
 }
 
 fn write_byte(c8: &mut Chip8_cpu, address: u16, value: u8) {
-    c8.memory[address as usize] = value;
+    c8.memory[address as usize] = value; // same as c8.memory[x] = y
 }
 
 fn open_rom(c8: &mut Chip8_cpu, file_name: &str) {
@@ -54,11 +54,7 @@ fn open_rom(c8: &mut Chip8_cpu, file_name: &str) {
         write_byte(c8, (c8.pc + (i as u16)) as u16, data[i]);
     }
 
-    //TODO: The rom should be read and placed into the memory 
-
-    //TODO: Read file in binary mode because .rom files are binary
-    //TODO: Read and write to memory functions for reading the rom file and converting to opcodes
-    //TODO: Finish this function properly
+    //TODO: Convert file to opcodes (instructions)
 }
 
 // TODO: Add update function
