@@ -1,2 +1,2 @@
 # Rust-CHIP8
-A simpel Chip8 project to learn Rust
+A simple Chip8 project to learn Rust
