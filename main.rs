@@ -45,10 +45,8 @@ fn emulate(c8: &mut Chip8_cpu) {
     c8.opcode = ((c8.memory[c8.pc as usize] as usize) << 8
         | (c8.memory[(c8.pc as usize) + (1 as usize)] as usize)) as u16; // Retrieve opcodes from file
 
-    // TODO: Currently first opcode is 224 = 0x00E0 but I think the PC is not updating properly so it's only printing the 224 = 0x00E0 opcode, need to fix
     println!("Passed first opcode: {}", c8.opcode);
     println!("Begin: Program counter is currently: {}", c8.pc); // Checking if the program counter is getting updated properly
-                                                                // TODO: Fix updatin the program counter, it keeps being at 0x200 = 512, probably has to do with the fact that there is no loop or updating yet
 
     /*
     00E0 (clear screen)
@@ -59,42 +57,73 @@ fn emulate(c8: &mut Chip8_cpu) {
     DXYN (display/draw)
     */
 
-    match (c8.opcode) & (0xF000) {
-        // ANNN: Set I to the address NNN
-        //0xA000 => {
-        //    c8.I = c8.opcode & 0x0FFF; // Executing the opcode
-        //    c8.pc += 2;
-        //}
+    match c8.opcode & 0xF000 {
         0x0000 => {
-            match (c8.opcode) & (0x00FF) {
+            match c8.opcode & 0x00FF {
                 0x00E0 => {
                     // 0x00E0: Clears the screen
-                    for i in 0..2048 {
-                        println!("Opcode: {} = 0x00E0", c8.opcode);
+                    println!("Opcode: {} = 0x00E0", c8.opcode);
+
+                    for i in 0..64 * 32 {
                         c8.gfx[i] = 0;
                     }
+
+                    c8.pc += 2;
                 }
 
                 0x00EE => {
                     // 0x00EE: Returns from a subroutine
                     println!("Opcode: {} = 0x00EE", c8.opcode);
+
                     c8.pc = c8.stack[c8.sp as usize];
                     c8.sp = c8.sp - 1;
                     c8.pc += 2;
                 }
 
-                _ => println!("Uknown opcode: 0x0000 = {}", c8.opcode),
+                // More opcodes
+                _ => panic!("Uknown opcode: {}", c8.opcode),
             }
         }
 
+        0xA000 => {
+            //0xA000: Set I to the address NNN
+            println!("Opcode: {} = 0xA000", c8.opcode);
+
+            c8.I = c8.opcode & 0x0FFF;
+            c8.pc += 2;
+        }
+
         0x1000 => {
-            // Jumps to address NNN
+            // 0x1000: Jumps to address NNN
             println!("Opcode: {} = 0x1000", c8.opcode);
+
             c8.pc = c8.opcode & 0x0FFF;
         }
 
+        0x2000 => {
+            // 0x2000: Call subroutine at NNN
+            println!("Opcode: {} = 0x2000", c8.opcode);
+
+            c8.sp += 1;
+            c8.stack[c8.sp as usize] = c8.pc;
+            c8.pc = c8.opcode & 0x0FFF;
+        }
+
+        0x3000 => {
+            // 0x3000: If VX = NN, skip next instruction
+            println!("Opcode: {} = 0x3000", c8.opcode);
+
+            let x = (c8.opcode & 0x0F00) >> 8;
+
+            if (c8.V[x as usize]) as usize == (c8.opcode & 0x00FF) as usize {
+                c8.pc += 2;
+            }
+
+            c8.pc += 2;
+        }
+
         // More opcodes
-        _ => println!("Unknown opcode: {}", c8.opcode),
+        _ => panic!("Unknown opcode: {}", c8.opcode),
     }
 
     println!("END: Program counter is currently: {}", c8.pc); // Checking if the program counter is getting updated properly
@@ -109,8 +138,6 @@ fn open_rom(c8: &mut Chip8_cpu, file_name: &str) {
     for i in 0..data.len() {
         c8.memory[(c8.pc as usize) + i] = data[i]; // Load file data into memory
     }
-
-    // TODO: Convert file to opcodes (instructions)
 }
 
 fn init(c8: &mut Chip8_cpu) {
@@ -144,16 +171,17 @@ fn init(c8: &mut Chip8_cpu) {
     }
 }
 
-// TODO: Add update function
+// TODO ?: Add update function
 // TODO: Add render (draw) function
 
 fn main() {
     let mut chip8 = Chip8_cpu::default();
 
     init(&mut chip8);
-    open_rom(&mut chip8, "IBM Logo.ch8");
-    println!("{chip8:#?}");
+    open_rom(&mut chip8, "INVADERS.ch8");
+    //println!("{chip8:#?}");
 
-    emulate(&mut chip8);
-    // TODO: Add a main loop
+    loop {
+        emulate(&mut chip8);
+    }
 }
