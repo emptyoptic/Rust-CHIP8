@@ -1,5 +1,8 @@
+#[allow(unused_imports)]
+use rand::random;
 use std::fs::File;
 use std::io::Read;
+
 // TODO: Once basic funtionality is implemented add SDL for drawing
 
 #[derive(Debug)]
@@ -81,16 +84,11 @@ fn emulate(c8: &mut Chip8_cpu) {
                 }
 
                 // More opcodes
-                _ => panic!("Uknown opcode: {}", c8.opcode),
+                _ => {
+                    // println!("{c8:#?}");
+                    panic!("Unknown or un-implemented opcode: {}", c8.opcode);
+                }
             }
-        }
-
-        0xA000 => {
-            //0xA000: Set I to the address NNN
-            println!("Opcode: {} = 0xA000", c8.opcode);
-
-            c8.I = c8.opcode & 0x0FFF;
-            c8.pc += 2;
         }
 
         0x1000 => {
@@ -110,7 +108,7 @@ fn emulate(c8: &mut Chip8_cpu) {
         }
 
         0x3000 => {
-            // 0x3000: If VX = NN, skip next instruction
+            // 0x3000: If VX == NN, skip next instruction
             println!("Opcode: {} = 0x3000", c8.opcode);
 
             let x = (c8.opcode & 0x0F00) >> 8;
@@ -122,8 +120,98 @@ fn emulate(c8: &mut Chip8_cpu) {
             c8.pc += 2;
         }
 
+        0x4000 => {
+            // 0x4000: If VX != NN, skip next instruction
+            println!("Opcode: {} = 0x4000", c8.opcode);
+
+            let x = (c8.opcode & 0x0F00) >> 8;
+
+            if (c8.V[x as usize]) as usize != (c8.opcode & 0x00FF) as usize {
+                c8.pc += 2;
+            }
+
+            c8.pc += 2;
+        }
+
+        0x5000 => {
+            // 0x5000: If VX == VY, skip next instruction
+            println!("Opcode: {} = 0x5000", c8.opcode);
+
+            let x = (c8.opcode & 0x0F00) >> 8;
+            let y = (c8.opcode & 0x00F0) >> 4;
+
+            if (c8.V[x as usize]) as usize == (c8.V[y as usize]) as usize {
+                c8.pc += 2;
+            }
+
+            c8.pc += 2;
+        }
+
+        0x6000 => {
+            // 0x6000: Sets VX to NN
+            println!("Opcode: {} = 0x6000", c8.opcode);
+
+            let x = (c8.opcode & 0x0F00) >> 8;
+
+            c8.V[x as usize] = (c8.opcode & 0x00FF) as u8;
+            c8.pc += 2;
+        }
+
+        0x7000 => {
+            // 0x7000: Add NN to VX
+            println!("Opcode: {} = 0x7000", c8.opcode);
+
+            let x = (c8.opcode & 0x0F00) >> 8;
+
+            c8.V[x as usize] += (c8.opcode & 0x00FF) as u8;
+            c8.pc += 2;
+        }
+
+        0x9000 => {
+            // 0x9000: If VX != VY, skip next instruction
+            println!("Opcode: {} = 0x9000", c8.opcode);
+
+            let x = (c8.opcode & 0x0F00) >> 8;
+            let y = (c8.opcode & 0x00F0) >> 4;
+
+            if (c8.V[x as usize]) as usize != (c8.V[y as usize]) as usize {
+                c8.pc += 2;
+            }
+
+            c8.pc += 2;
+        }
+
+        0xA000 => {
+            //0xA000: Set I to the address NNN
+            println!("Opcode: {} = 0xA000", c8.opcode);
+
+            c8.I = c8.opcode & 0x0FFF;
+            c8.pc += 2;
+        }
+
+        0xB000 => {
+            //0xB000: Jump to address NN and set to V0
+            println!("Opcode: {} = 0xC000", c8.opcode);
+
+            c8.pc = ((c8.opcode & 0x0FFF) as usize + c8.V[0] as usize) as u16;
+        }
+
+        0xC000 => {
+            // 0xC000: Sets VX to the result of a bitwise and operation on a random number and NN
+            println!("Opcode: {} = 0xC000", c8.opcode);
+
+            let x = (c8.opcode & 0x0F00) >> 8;
+
+            c8.V[x as usize] =
+                ((rand::random::<usize>() % 256) as usize & (c8.opcode & 0x00FF) as usize) as u8;
+            c8.pc += 2;
+        }
+
         // More opcodes
-        _ => panic!("Unknown opcode: {}", c8.opcode),
+        _ => {
+            // println!("{c8:#?}");
+            panic!("Unknown or un-implemented opcode: {}", c8.opcode);
+        }
     }
 
     println!("END: Program counter is currently: {}", c8.pc); // Checking if the program counter is getting updated properly
@@ -138,6 +226,8 @@ fn open_rom(c8: &mut Chip8_cpu, file_name: &str) {
     for i in 0..data.len() {
         c8.memory[(c8.pc as usize) + i] = data[i]; // Load file data into memory
     }
+
+    println!("Loaded ROM: {}", file_name);
 }
 
 fn init(c8: &mut Chip8_cpu) {
@@ -145,6 +235,7 @@ fn init(c8: &mut Chip8_cpu) {
     c8.opcode = 0x0; // Set initial opcode value to be zero
     c8.I = 0x0; // Set initial index value to be zero
     c8.sp = 0x0; // Set the stack pointer vlaue to be zero
+
     c8.fontset = [
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -178,7 +269,7 @@ fn main() {
     let mut chip8 = Chip8_cpu::default();
 
     init(&mut chip8);
-    open_rom(&mut chip8, "INVADERS.ch8");
+    open_rom(&mut chip8, "Rocket2.ch8");
     //println!("{chip8:#?}");
 
     loop {
