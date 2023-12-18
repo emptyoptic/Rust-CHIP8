@@ -22,6 +22,7 @@ struct Chip8_cpu {
     sp: u16,            // The stack pointer remembers the current location
     key: [u8; 16],      // Keyboard input
     fontset: [u8; 80],  // Default fontset
+    draw_flag: bool,    // Draw flag
 }
 
 // initialize the Chip8 and set initial values to zero
@@ -40,6 +41,7 @@ impl Default for Chip8_cpu {
             sp: 0,
             key: [0; 16],
             fontset: [0; 80],
+            draw_flag: false,
         }
     }
 }
@@ -48,8 +50,8 @@ fn emulate(c8: &mut Chip8_cpu) {
     c8.opcode = ((c8.memory[c8.pc as usize] as usize) << 8
         | (c8.memory[(c8.pc as usize) + (1 as usize)] as usize)) as u16; // Retrieve opcodes from file
 
-    println!("Passed first opcode: {}", c8.opcode);
-    println!("Begin: Program counter is currently: {}", c8.pc); // Checking if the program counter is getting updated properly
+    println!("Passed opcode: {}", c8.opcode);
+    println!("BEGIN: Program counter is currently: {}", c8.pc); // Checking if the program counter is getting updated properly
 
     /*
     00E0 (clear screen)
@@ -71,6 +73,7 @@ fn emulate(c8: &mut Chip8_cpu) {
                         c8.gfx[i] = 0;
                     }
 
+                    c8.draw_flag = true;
                     c8.pc += 2;
                 }
 
@@ -160,6 +163,7 @@ fn emulate(c8: &mut Chip8_cpu) {
         0x7000 => {
             // 0x7000: Add NN to VX
             println!("Opcode: {} = 0x7000", c8.opcode);
+            println!("{c8:#?}");    // TODO: Fix error
 
             let x = (c8.opcode & 0x0F00) >> 8;
 
@@ -178,6 +182,59 @@ fn emulate(c8: &mut Chip8_cpu) {
                 c8.pc += 2;
             }
 
+            c8.pc += 2;
+        }
+
+        0xD000 => {
+            /*
+            DXYN: Draws a sprite at coordinate (VX, VY) that has a width of 8
+            pixels and a height of N pixels
+
+            Each row of 8 pixels is read as bit-coded starting from memory
+            location I;
+
+            I value doesn't change after the execution of this instruction
+
+            VF is set to 1 if any screen pixels are flipped from set to unset
+            when the sprite is drawn, and to 0 if that doesn't happen
+            */
+
+            println!("Opcode: {} = 0xD000", c8.opcode);
+
+            let x: u8 = c8.V[(c8.opcode as usize & 0x0F00) >> 8];
+            let y: u8 = c8.V[(c8.opcode as usize & 0x00F0) >> 4];
+            let height: u8 = (c8.opcode as usize & 0x000F) as u8;
+            let mut pixel: u8;
+
+            c8.V[0xF] = 0;
+
+            for mut yline in 0..height {
+                if yline <= height {
+                    yline += 1;
+                }
+
+                pixel = c8.memory[c8.I as usize + yline as usize];
+
+                for mut xline in 0..8 {
+                    if xline < 7 {
+                        xline += 1;
+                    }
+
+                    if pixel & (0x80 >> xline) != 0 {
+                        if c8.gfx
+                            [x as usize + xline as usize + ((y as usize + yline as usize) * 64)]
+                            == 1
+                        {
+                            c8.V[0xF] = 1;
+                        }
+                        c8.gfx
+                            [x as usize + xline as usize + ((y as usize + yline as usize) * 64)] ^=
+                            1;
+                    }
+                }
+            }
+
+            c8.draw_flag = true;
             c8.pc += 2;
         }
 
@@ -269,7 +326,15 @@ fn main() {
     let mut chip8 = Chip8_cpu::default();
 
     init(&mut chip8);
-    open_rom(&mut chip8, "Rocket2.ch8");
+    /*
+     * IBM Logo.ch8: Working
+     * test_opcode.ch8: Not working > err = add overflow
+     * Rocket2.ch8: Not working > err = un-implemented opcode 
+     * INVADERS.ch8: Not working > err = un-implementd opcode
+     * C8PIC.ch8: Not working > err = index out of bounds: len is 2049 but max is 2048 !!! 0xD000 
+     */
+
+    open_rom(&mut chip8, "test_opcode.ch8");
     //println!("{chip8:#?}");
 
     loop {
