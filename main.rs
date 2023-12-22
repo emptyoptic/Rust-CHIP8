@@ -2,6 +2,7 @@
 use rand::random;
 use std::fs::File;
 use std::io::Read;
+use std::env;
 
 // TODO: Once basic funtionality is implemented add SDL for drawing
 
@@ -163,7 +164,7 @@ fn emulate(c8: &mut Chip8_cpu) {
         0x7000 => {
             // 0x7000: Add NN to VX
             println!("Opcode: {} = 0x7000", c8.opcode);
-            println!("{c8:#?}");    // TODO: Fix error
+            println!("{c8:#?}"); // TODO: Fix error
 
             let x = (c8.opcode & 0x0F00) >> 8;
 
@@ -187,7 +188,7 @@ fn emulate(c8: &mut Chip8_cpu) {
 
         0xD000 => {
             /*
-            DXYN: Draws a sprite at coordinate (VX, VY) that has a width of 8
+            0xD000: Draws a sprite at coordinate (VX, VY) that has a width of 8
             pixels and a height of N pixels
 
             Each row of 8 pixels is read as bit-coded starting from memory
@@ -329,13 +330,27 @@ fn main() {
     /*
      * IBM Logo.ch8: Working
      * test_opcode.ch8: Not working > err = add overflow
-     * Rocket2.ch8: Not working > err = un-implemented opcode 
+     * Rocket2.ch8: Not working > err = un-implemented opcode
      * INVADERS.ch8: Not working > err = un-implementd opcode
-     * C8PIC.ch8: Not working > err = index out of bounds: len is 2049 but max is 2048 !!! 0xD000 
+     * C8PIC.ch8: Not working > err = index out of bounds: len is 2049 but max is 2048 !!! 0xD000
      */
 
-    open_rom(&mut chip8, "test_opcode.ch8");
-    //println!("{chip8:#?}");
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() <= 1 {
+        println!("Command line arguments cannot be zero.");
+        return;
+    }
+    else if args[1] == "" || args[1] == " " {
+        println!("Command line arguments cannot be zero.");
+        return;
+    }
+    else{
+        open_rom(&mut chip8, &args[1]);
+    }
+
+    // open_rom(&mut chip8, &args[1]);
+    // println!("{chip8:#?}");
 
     loop {
         emulate(&mut chip8);
