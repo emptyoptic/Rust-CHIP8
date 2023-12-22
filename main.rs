@@ -1,8 +1,8 @@
 #[allow(unused_imports)]
 use rand::random;
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::env;
 
 // TODO: Once basic funtionality is implemented add SDL for drawing
 
@@ -54,15 +54,7 @@ fn emulate(c8: &mut Chip8_cpu) {
     println!("Passed opcode: {}", c8.opcode);
     println!("BEGIN: Program counter is currently: {}", c8.pc); // Checking if the program counter is getting updated properly
 
-    /*
-    00E0 (clear screen)
-    1NNN (jump)
-    6XNN (set register VX)
-    7XNN (add value to register VX)
-    ANNN (set index register I)
-    DXYN (display/draw)
-    */
-
+    // TODO: Check opcodes
     match c8.opcode & 0xF000 {
         0x0000 => {
             match c8.opcode & 0x00FF {
@@ -118,10 +110,10 @@ fn emulate(c8: &mut Chip8_cpu) {
             let x = (c8.opcode & 0x0F00) >> 8;
 
             if (c8.V[x as usize]) as usize == (c8.opcode & 0x00FF) as usize {
+                c8.pc += 4;
+            } else {
                 c8.pc += 2;
             }
-
-            c8.pc += 2;
         }
 
         0x4000 => {
@@ -131,10 +123,10 @@ fn emulate(c8: &mut Chip8_cpu) {
             let x = (c8.opcode & 0x0F00) >> 8;
 
             if (c8.V[x as usize]) as usize != (c8.opcode & 0x00FF) as usize {
+                c8.pc += 4;
+            } else {
                 c8.pc += 2;
             }
-
-            c8.pc += 2;
         }
 
         0x5000 => {
@@ -145,10 +137,10 @@ fn emulate(c8: &mut Chip8_cpu) {
             let y = (c8.opcode & 0x00F0) >> 4;
 
             if (c8.V[x as usize]) as usize == (c8.V[y as usize]) as usize {
+                c8.pc += 4;
+            } else {
                 c8.pc += 2;
             }
-
-            c8.pc += 2;
         }
 
         0x6000 => {
@@ -180,10 +172,10 @@ fn emulate(c8: &mut Chip8_cpu) {
             let y = (c8.opcode & 0x00F0) >> 4;
 
             if (c8.V[x as usize]) as usize != (c8.V[y as usize]) as usize {
+                c8.pc += 4;
+            } else {
                 c8.pc += 2;
             }
-
-            c8.pc += 2;
         }
 
         0xD000 => {
@@ -340,12 +332,10 @@ fn main() {
     if args.len() <= 1 {
         println!("Command line arguments cannot be zero.");
         return;
-    }
-    else if args[1] == "" || args[1] == " " {
+    } else if args[1] == "" || args[1] == " " {
         println!("Command line arguments cannot be zero.");
         return;
-    }
-    else{
+    } else {
         open_rom(&mut chip8, &args[1]);
     }
 
